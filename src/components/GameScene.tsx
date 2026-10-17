@@ -315,9 +315,14 @@ function BoostParticles({ isBoosting, headPos }: { isBoosting: boolean; headPos:
 }
 
 export function GameScene() {
-  const { gameState, playerId, sendPlayerState, sendCollectOrb, is3D, theme } = useGameStore();
+  const { gameState, playerId, sendPlayerState, sendCollectOrb, is3D, theme, quality } = useGameStore();
   const { camera, gl } = useThree();
   const isDark = theme === 'dark';
+
+  useEffect(() => {
+    // Quality based resolution (0.5 to 1.0)
+    gl.setPixelRatio(Math.min(window.devicePixelRatio * quality, 2));
+  }, [gl, quality]);
   const lightRef = useRef<THREE.DirectionalLight>(null);
   const [lightTarget] = useState(() => new THREE.Object3D());
   const mouseScreenPos = useRef<THREE.Vector2>(new THREE.Vector2(0, 0));

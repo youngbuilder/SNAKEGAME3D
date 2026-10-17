@@ -80,6 +80,8 @@ export function UI() {
     toggleSound,
     theme,
     toggleTheme,
+    quality,
+    setQuality,
   } = useGameStore();
 
   const isDark = theme === 'dark';
@@ -255,6 +257,19 @@ export function UI() {
               >
                 <Sun size={16} />
               </button>
+              <div className="flex flex-col gap-1 items-center px-2">
+                <input
+                  type="range"
+                  min={0.5}
+                  max={1}
+                  step={0.1}
+                  value={quality}
+                  onChange={(e) => setQuality(parseFloat(e.target.value))}
+                  className="w-20 accent-cyan-500 cursor-pointer"
+                  title="Graphics Quality"
+                />
+                <span className={`text-[8px] font-bold ${isDark ? 'text-zinc-500' : 'text-zinc-400'}`}>QUALITY</span>
+              </div>
             </div>
           </div>
 
@@ -695,6 +710,24 @@ export function UI() {
           >
             <Sun size={14} />
           </button>
+          <button
+            onClick={() => useGameStore.getState().setShowQualitySlider(!useGameStore.getState().showQualitySlider)}
+            className="p-1.5 bg-zinc-900/80 hover:bg-zinc-800 text-zinc-400 hover:text-white rounded-full border border-white/10 backdrop-blur-md transition-colors cursor-pointer"
+          >
+            <span className="text-[10px] font-black">Q</span>
+          </button>
+          {useGameStore.getState().showQualitySlider && (
+            <input
+              type="range"
+              min={0.3}
+              max={1}
+              step={0.1}
+              value={useGameStore.getState().quality}
+              onChange={(e) => useGameStore.getState().setQuality(parseFloat(e.target.value))}
+              className="w-16 accent-cyan-500 cursor-pointer pointer-events-auto"
+              title="Graphics Quality"
+            />
+          )}
           <h1
             className="text-base sm:text-lg font-black tracking-tight text-white flex items-center gap-1.5"
             style={{ textShadow: `0 0 12px ${selectedSkinColor}` }}

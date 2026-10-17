@@ -26,6 +26,8 @@ interface GameStore {
   isTouchDevice: boolean;
   soundEnabled: boolean;
   theme: 'dark' | 'light';
+  quality: number;
+  showQualitySlider: boolean;
   connect: () => void;
   fetchRooms: () => void;
   createRoom: (
@@ -48,6 +50,8 @@ interface GameStore {
   setPlayerName: (name: string) => void;
   toggleSound: () => void;
   toggleTheme: () => void;
+  setQuality: (quality: number) => void;
+  setShowQualitySlider: (show: boolean) => void;
   setIsTouchDevice: (isTouch: boolean) => void;
 }
 
@@ -75,6 +79,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
   playerName: 'CyberSnake',
   isTouchDevice: typeof window !== 'undefined' ? ('ontouchstart' in window || navigator.maxTouchPoints > 0) : false,
   soundEnabled: true,
+  theme: 'dark',
+  quality: 1,
+  showQualitySlider: false,
   connect: () => {
     if (get().socket) return;
     const socket = io();
@@ -201,5 +208,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
   theme: 'dark',
   toggleTheme: () => set((state) => ({ theme: state.theme === 'dark' ? 'light' : 'dark' })),
+  setQuality: (quality) => set({ quality }),
+  setShowQualitySlider: (show) => set({ showQualitySlider: show }),
   setIsTouchDevice: (isTouchDevice) => set({ isTouchDevice }),
 }));
