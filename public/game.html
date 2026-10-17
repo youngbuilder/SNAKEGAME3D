@@ -1,0 +1,903 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>SNAKEGAME3D</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: none;
+    }
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #030712;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    #canvas-container {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+    }
+    #ui {
+      position: absolute;
+      inset: 0;
+      z-index: 10;
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 12px;
+      padding-top: max(12px, env(safe-area-inset-top));
+      padding-bottom: max(12px, env(safe-area-inset-bottom));
+      padding-left: max(12px, env(safe-area-inset-left));
+      padding-right: max(12px, env(safe-area-inset-right));
+    }
+    .pointer {
+      pointer-events: auto;
+    }
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .title {
+      font-size: 20px;
+      font-weight: 900;
+      letter-spacing: -0.5px;
+      color: #fff;
+      text-shadow: 0 0 10px rgba(0, 243, 255, 0.6);
+    }
+    .score-badge {
+      font-family: monospace;
+      font-size: 14px;
+      font-weight: 800;
+      color: #fff;
+      background: rgba(255, 255, 255, 0.1);
+      padding: 4px 10px;
+      border-radius: 9999px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+    }
+    .score-badge span {
+      color: #00f3ff;
+    }
+    .top-actions {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    .btn {
+      padding: 6px 12px;
+      background: rgba(0, 0, 0, 0.5);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 9999px;
+      color: #fff;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      backdrop-filter: blur(8px);
+      transition: all 0.15s;
+    }
+    .btn:active {
+      transform: scale(0.95);
+    }
+    .leaderboard {
+      position: absolute;
+      top: 60px;
+      right: 12px;
+      width: 170px;
+      background: rgba(0, 0, 0, 0.55);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 8px 10px;
+      backdrop-filter: blur(6px);
+    }
+    .lb-header {
+      font-size: 11px;
+      font-weight: 800;
+      color: #fbbf24;
+      margin-bottom: 4px;
+      padding-bottom: 2px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      display: flex;
+      justify-content: space-between;
+    }
+    .lb-item {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      padding: 2px 0;
+    }
+    .lb-name {
+      font-weight: 600;
+      max-width: 100px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .lb-score {
+      font-family: monospace;
+      color: #e4e4e7;
+    }
+    .controls-container {
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      padding-bottom: 8px;
+      z-index: 20;
+    }
+    .joystick-base {
+      width: 110px;
+      height: 110px;
+      border-radius: 50%;
+      background: rgba(0, 0, 0, 0.4);
+      border: 2px solid rgba(0, 243, 255, 0.4);
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      touch-action: none;
+    }
+    .joystick-knob {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: #00f3ff;
+      border: 2px solid #ffffff;
+      box-shadow: 0 0 15px #00f3ff;
+      position: absolute;
+      pointer-events: none;
+      transform: translate(0px, 0px);
+    }
+    .boost-btn {
+      width: 88px;
+      height: 88px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #ea580c, #f59e0b);
+      border: 2px solid #fdba74;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-weight: 900;
+      font-size: 13px;
+      box-shadow: 0 0 20px rgba(249, 115, 22, 0.5);
+      cursor: pointer;
+      touch-action: none;
+      transition: transform 0.1s;
+    }
+    .boost-btn:active, .boost-btn.active {
+      transform: scale(0.92);
+      box-shadow: 0 0 30px rgba(249, 115, 22, 0.9);
+    }
+    #modal {
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.8);
+      backdrop-filter: blur(6px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 50;
+      padding: 16px;
+    }
+    .modal-card {
+      background: #09090b;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 20px;
+      padding: 24px;
+      max-width: 360px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.8);
+    }
+    .modal-title {
+      font-size: 26px;
+      font-weight: 900;
+      color: #fff;
+      margin-bottom: 4px;
+    }
+    .skin-preview {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      margin: 12px auto;
+      border: 2px solid #fff;
+      display: flex;
+      align-items: center;
+      justify-content: space-around;
+      padding: 0 10px;
+      transition: background-color 0.2s, box-shadow 0.2s;
+    }
+    .eye {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .pupil {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: #000;
+    }
+    .skin-palette {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      margin: 14px 0;
+    }
+    .skin-swatch {
+      height: 38px;
+      border-radius: 10px;
+      border: 2px solid transparent;
+      cursor: pointer;
+      transition: transform 0.15s, border-color 0.15s;
+    }
+    .skin-swatch.selected {
+      border-color: #fff;
+      transform: scale(1.06);
+    }
+    .play-btn {
+      width: 100%;
+      padding: 13px;
+      background: #00f3ff;
+      border: none;
+      border-radius: 12px;
+      color: #000;
+      font-weight: 900;
+      font-size: 15px;
+      cursor: pointer;
+      box-shadow: 0 0 15px rgba(0, 243, 255, 0.5);
+      margin-top: 10px;
+      transition: transform 0.1s;
+    }
+    .play-btn:active {
+      transform: scale(0.97);
+    }
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+  <div id="canvas-container"></div>
+  <div id="ui">
+    <div class="top-bar pointer">
+      <div class="brand">
+        <div class="title" id="logo-title">SNAKEGAME3D</div>
+        <div class="score-badge" id="score-display">Score: <span>10</span></div>
+      </div>
+      <div class="top-actions">
+        <button class="btn" id="view-toggle">3D View</button>
+        <button class="btn" id="sound-toggle">Sound: ON</button>
+      </div>
+    </div>
+    <div class="leaderboard pointer">
+      <div class="lb-header">
+        <span>Leaderboard</span>
+        <span>TOP 5</span>
+      </div>
+      <div id="leaderboard-list"></div>
+    </div>
+    <div class="controls-container pointer">
+      <div class="joystick-base" id="joystick-base">
+        <div class="joystick-knob" id="joystick-knob"></div>
+      </div>
+      <button class="boost-btn" id="boost-btn">
+        <span>TURBO</span>
+        <span>BOOST</span>
+      </button>
+    </div>
+  </div>
+  <div id="modal">
+    <div class="modal-card">
+      <div class="modal-title">SNAKEGAME3D</div>
+      <p style="color: #a1a1aa; font-size: 12px;" id="modal-sub">Multiplayer 3D Arena</p>
+      <div class="skin-preview" id="skin-preview">
+        <div class="eye"><div class="pupil"></div></div>
+        <div class="eye"><div class="pupil"></div></div>
+      </div>
+      <div style="font-size: 11px; color: #71717a; text-align: left; font-weight: 700;">Select Skin</div>
+      <div class="skin-palette" id="skin-palette"></div>
+      <button class="play-btn" id="start-btn">PLAY NOW</button>
+    </div>
+  </div>
+  <script>
+    let soundEnabled = true;
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    function playOrbSound() {
+      if (!soundEnabled || !audioCtx) return;
+      try {
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.frequency.setValueAtTime(620, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(1100, audioCtx.currentTime + 0.1);
+        gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.1);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.1);
+      } catch(e) {}
+    }
+    function playCrashSound() {
+      if (!soundEnabled || !audioCtx) return;
+      try {
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(140, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(30, audioCtx.currentTime + 0.3);
+        gain.gain.setValueAtTime(0.18, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.3);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.3);
+      } catch(e) {}
+    }
+    document.getElementById('sound-toggle').addEventListener('click', () => {
+      soundEnabled = !soundEnabled;
+      document.getElementById('sound-toggle').innerText = soundEnabled ? 'Sound: ON' : 'Sound: OFF';
+    });
+
+    const container = document.getElementById('canvas-container');
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x030712);
+    scene.fog = new THREE.Fog(0x030712, 35, 140);
+    let is3D = true;
+    const camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 500);
+    camera.position.set(0, -10, 36);
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.shadowMap.enabled = true;
+    container.appendChild(renderer.domElement);
+
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+    scene.add(ambientLight);
+    const dirLight = new THREE.DirectionalLight(0xffffff, 1.8);
+    dirLight.position.set(15, -15, 40);
+    dirLight.castShadow = true;
+    scene.add(dirLight);
+
+    const WORLD_SIZE = 280;
+    const half = WORLD_SIZE / 2;
+
+    const floor = new THREE.Mesh(
+      new THREE.PlaneGeometry(WORLD_SIZE, WORLD_SIZE),
+      new THREE.MeshStandardMaterial({ color: 0x050811, roughness: 0.4, metalness: 0.7 })
+    );
+    floor.receiveShadow = true;
+    scene.add(floor);
+
+    const grid = new THREE.GridHelper(WORLD_SIZE, WORLD_SIZE / 2, 0x00f3ff, 0x1e293b);
+    grid.rotation.x = Math.PI / 2;
+    grid.position.z = 0.05;
+    scene.add(grid);
+
+    const wallMat = new THREE.MeshStandardMaterial({
+      color: 0x0284c7,
+      emissive: 0x0369a1,
+      emissiveIntensity: 1.2,
+      transparent: true,
+      opacity: 0.5
+    });
+    function addWall(w, h, d, x, y) {
+      const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), wallMat);
+      m.position.set(x, y, 2);
+      scene.add(m);
+    }
+    addWall(WORLD_SIZE, 0.6, 4, 0, half);
+    addWall(WORLD_SIZE, 0.6, 4, 0, -half);
+    addWall(0.6, WORLD_SIZE, 4, half, 0);
+    addWall(0.6, WORLD_SIZE, 4, -half, 0);
+
+    const ORB_COUNT = 300;
+    const orbColors = [0xff7eb3, 0xffb86c, 0xf1fa8c, 0x50fa7b, 0x8be9fd, 0xbd93f9];
+    const orbs = [];
+    const orbGeo = new THREE.OctahedronGeometry(0.5, 0);
+    for (let i = 0; i < ORB_COUNT; i++) {
+      spawnOrb();
+    }
+    function spawnOrb(x, y, value = 1) {
+      const color = orbColors[Math.floor(Math.random() * orbColors.length)];
+      const mat = new THREE.MeshStandardMaterial({
+        color: color,
+        emissive: color,
+        emissiveIntensity: 1.2,
+        roughness: 0.2
+      });
+      const mesh = new THREE.Mesh(orbGeo, mat);
+      const ox = x !== undefined ? x : (Math.random() - 0.5) * (WORLD_SIZE - 20);
+      const oy = y !== undefined ? y : (Math.random() - 0.5) * (WORLD_SIZE - 20);
+      mesh.position.set(ox, oy, 0.5);
+      scene.add(mesh);
+      orbs.push({ mesh, value, x: ox, y: oy });
+    }
+
+    const SKINS = [
+      { name: 'Cyan', color: '#00f3ff', hex: 0x00f3ff },
+      { name: 'Pink', color: '#ff007f', hex: 0xff007f },
+      { name: 'Green', color: '#39ff14', hex: 0x39ff14 },
+      { name: 'Orange', color: '#ff9900', hex: 0xff9900 },
+      { name: 'Purple', color: '#bd93f9', hex: 0xbd93f9 },
+      { name: 'Red', color: '#ff3366', hex: 0xff3366 },
+      { name: 'Yellow', color: '#f1fa8c', hex: 0xf1fa8c },
+      { name: 'Ice', color: '#8be9fd', hex: 0x8be9fd }
+    ];
+    let selectedSkin = SKINS[0];
+
+    const paletteEl = document.getElementById('skin-palette');
+    const previewEl = document.getElementById('skin-preview');
+    function updateSkinUI() {
+      previewEl.style.backgroundColor = selectedSkin.color;
+      previewEl.style.boxShadow = `0 0 20px ${selectedSkin.color}`;
+      document.getElementById('start-btn').style.backgroundColor = selectedSkin.color;
+      document.getElementById('joystick-knob').style.backgroundColor = selectedSkin.color;
+      document.getElementById('joystick-knob').style.boxShadow = `0 0 15px ${selectedSkin.color}`;
+      document.querySelectorAll('.skin-swatch').forEach((sw, idx) => {
+        if (SKINS[idx].hex === selectedSkin.hex) sw.classList.add('selected');
+        else sw.classList.remove('selected');
+      });
+    }
+    SKINS.forEach((skin) => {
+      const sw = document.createElement('div');
+      sw.className = 'skin-swatch' + (skin.hex === selectedSkin.hex ? ' selected' : '');
+      sw.style.backgroundColor = skin.color;
+      sw.addEventListener('click', () => {
+        selectedSkin = skin;
+        updateSkinUI();
+      });
+      paletteEl.appendChild(sw);
+    });
+    updateSkinUI();
+
+    let player = {
+      alive: false,
+      score: 10,
+      angle: 0,
+      smoothAngle: 0,
+      isBoosting: false,
+      segments: [],
+      meshes: []
+    };
+
+    const BOTS = [];
+    const BOT_NAMES = ['CyberViper', 'NeonPulse', 'QuantumBoa', 'MatrixHydra', 'LaserCobra'];
+    BOT_NAMES.forEach((name, i) => {
+      BOTS.push(createBot(name, SKINS[(i + 1) % SKINS.length].hex));
+    });
+    function createBot(name, color) {
+      const angle = Math.random() * Math.PI * 2;
+      const startX = (Math.random() - 0.5) * (WORLD_SIZE - 40);
+      const startY = (Math.random() - 0.5) * (WORLD_SIZE - 40);
+      const segs = [];
+      const meshes = [];
+      for (let i = 0; i < 12; i++) {
+        segs.push({ x: startX - Math.cos(angle) * i * 0.52, y: startY - Math.sin(angle) * i * 0.52 });
+        const sphere = new THREE.Mesh(
+          new THREE.SphereGeometry(i === 0 ? 0.8 : 0.6, 12, 12),
+          new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 0.6 })
+        );
+        sphere.position.set(segs[i].x, segs[i].y, 0.6);
+        scene.add(sphere);
+        meshes.push(sphere);
+      }
+      return {
+        name,
+        color,
+        angle,
+        targetAngle: angle,
+        score: 12,
+        isBoosting: false,
+        segments: segs,
+        meshes: meshes,
+        alive: true,
+        respawnTimer: 0
+      };
+    }
+
+    function initPlayer() {
+      player.meshes.forEach(m => scene.remove(m));
+      player.meshes = [];
+      player.segments = [];
+      player.alive = true;
+      player.score = 10;
+      player.angle = Math.random() * Math.PI * 2;
+      player.smoothAngle = player.angle;
+      player.isBoosting = false;
+      const startX = (Math.random() - 0.5) * 30;
+      const startY = (Math.random() - 0.5) * 30;
+      for (let i = 0; i < player.score; i++) {
+        player.segments.push({
+          x: startX - Math.cos(player.angle) * i * 0.52,
+          y: startY - Math.sin(player.angle) * i * 0.52
+        });
+        const sphere = new THREE.Mesh(
+          new THREE.SphereGeometry(i === 0 ? 0.9 : 0.65, 16, 16),
+          new THREE.MeshStandardMaterial({
+            color: selectedSkin.hex,
+            emissive: selectedSkin.hex,
+            emissiveIntensity: 0.7,
+            roughness: 0.2
+          })
+        );
+        sphere.castShadow = true;
+        scene.add(sphere);
+        player.meshes.push(sphere);
+      }
+      document.getElementById('modal').style.display = 'none';
+    }
+
+    let joystickVector = { x: 0, y: 0, active: false };
+    let mouseWorld = { x: 0, y: 0, active: false };
+    let isBoostPressed = false;
+
+    const raycaster = new THREE.Raycaster();
+    const plane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0);
+    const intersectPoint = new THREE.Vector3();
+    window.addEventListener('mousemove', (e) => {
+      const mouse = new THREE.Vector2(
+        (e.clientX / window.innerWidth) * 2 - 1,
+        -(e.clientY / window.innerHeight) * 2 + 1
+      );
+      raycaster.setFromCamera(mouse, camera);
+      if (raycaster.ray.intersectPlane(plane, intersectPoint)) {
+        mouseWorld.x = intersectPoint.x;
+        mouseWorld.y = intersectPoint.y;
+        mouseWorld.active = true;
+      }
+    });
+
+    window.addEventListener('mousedown', (e) => {
+      if (e.target.tagName !== 'BUTTON' && !e.target.closest('#joystick-base')) {
+        isBoostPressed = true;
+      }
+    });
+    window.addEventListener('mouseup', () => { isBoostPressed = false; });
+    window.addEventListener('keydown', (e) => { if (e.code === 'Space') isBoostPressed = true; });
+    window.addEventListener('keyup', (e) => { if (e.code === 'Space') isBoostPressed = false; });
+
+    const jBase = document.getElementById('joystick-base');
+    const jKnob = document.getElementById('joystick-knob');
+    let jTouchId = null;
+    function handleJoystick(touchX, touchY) {
+      const rect = jBase.getBoundingClientRect();
+      const cx = rect.left + rect.width / 2;
+      const cy = rect.top + rect.height / 2;
+      const dx = touchX - cx;
+      const dy = touchY - cy;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      const maxR = 40;
+      const clamped = Math.min(dist, maxR);
+      const ang = Math.atan2(dy, dx);
+      const kx = Math.cos(ang) * clamped;
+      const ky = Math.sin(ang) * clamped;
+      jKnob.style.transform = `translate(${kx}px, ${ky}px)`;
+      joystickVector.x = kx / maxR;
+      joystickVector.y = ky / maxR;
+      joystickVector.active = true;
+    }
+    jBase.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      const touch = e.touches[e.touches.length - 1];
+      jTouchId = touch.identifier;
+      handleJoystick(touch.clientX, touch.clientY);
+    });
+    window.addEventListener('touchmove', (e) => {
+      if (joystickVector.active) {
+        for (let i = 0; i < e.touches.length; i++) {
+          if (e.touches[i].identifier === jTouchId) {
+            handleJoystick(e.touches[i].clientX, e.touches[i].clientY);
+            break;
+          }
+        }
+      }
+    }, { passive: false });
+    function resetJoystick() {
+      jTouchId = null;
+      joystickVector.active = false;
+      jKnob.style.transform = 'translate(0px, 0px)';
+    }
+    window.addEventListener('touchend', (e) => {
+      if (joystickVector.active) {
+        let found = false;
+        for (let i = 0; i < e.touches.length; i++) {
+          if (e.touches[i].identifier === jTouchId) found = true;
+        }
+        if (!found) resetJoystick();
+      }
+    });
+
+    const boostBtn = document.getElementById('boost-btn');
+    boostBtn.addEventListener('mousedown', () => { isBoostPressed = true; boostBtn.classList.add('active'); });
+    boostBtn.addEventListener('mouseup', () => { isBoostPressed = false; boostBtn.classList.remove('active'); });
+    boostBtn.addEventListener('touchstart', (e) => {
+      e.preventDefault();
+      isBoostPressed = true;
+      boostBtn.classList.add('active');
+    });
+    boostBtn.addEventListener('touchend', (e) => {
+      e.preventDefault();
+      isBoostPressed = false;
+      boostBtn.classList.remove('active');
+    });
+
+    const viewBtn = document.getElementById('view-toggle');
+    viewBtn.addEventListener('click', () => {
+      is3D = !is3D;
+      viewBtn.innerText = is3D ? '3D View' : '2D View';
+    });
+
+    document.getElementById('start-btn').addEventListener('click', initPlayer);
+
+    let clock = new THREE.Clock();
+    function animate() {
+      requestAnimationFrame(animate);
+      const delta = Math.min(clock.getDelta(), 0.1);
+      const time = clock.getElapsedTime();
+
+      orbs.forEach((orb) => {
+        orb.mesh.position.z = 0.5 + Math.sin(time * 3 + orb.x * 0.2) * 0.2;
+        orb.mesh.rotation.y = time * 2;
+      });
+
+      if (player.alive) {
+        const head = { ...player.segments[0] };
+        const maxTurn = 3.0 * delta;
+        if (joystickVector.active) {
+          const targetAng = Math.atan2(-joystickVector.y, joystickVector.x);
+          let diff = targetAng - player.angle;
+          while (diff < -Math.PI) diff += Math.PI * 2;
+          while (diff > Math.PI) diff -= Math.PI * 2;
+          player.angle += Math.sign(diff) * Math.min(Math.abs(diff), maxTurn);
+        } else if (mouseWorld.active) {
+          const dx = mouseWorld.x - head.x;
+          const dy = mouseWorld.y - head.y;
+          if (dx * dx + dy * dy > 2.5) {
+            const targetAng = Math.atan2(dy, dx);
+            let diff = targetAng - player.angle;
+            while (diff < -Math.PI) diff += Math.PI * 2;
+            while (diff > Math.PI) diff -= Math.PI * 2;
+            player.angle += Math.sign(diff) * Math.min(Math.abs(diff), maxTurn);
+          }
+        }
+        player.isBoosting = isBoostPressed && player.score > 11;
+        const t = Math.max(0, Math.min(1, (player.score - 10) / 110));
+        const speed = player.isBoosting ? (19.5 - t * 5.5) : (10.8 - t * 3.6);
+        head.x += Math.cos(player.angle) * speed * delta;
+        head.y += Math.sin(player.angle) * speed * delta;
+
+        if (head.x < -half || head.x > half || head.y < -half || head.y > half) {
+          playerDie();
+          return;
+        }
+
+        player.segments[0] = head;
+        const spacing = 0.52;
+        for (let i = 1; i < player.segments.length; i++) {
+          const prev = player.segments[i - 1];
+          const curr = player.segments[i];
+          const dx = curr.x - prev.x;
+          const dy = curr.y - prev.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist > spacing) {
+            const ang = Math.atan2(dy, dx);
+            curr.x = prev.x + Math.cos(ang) * spacing;
+            curr.y = prev.y + Math.sin(ang) * spacing;
+          }
+        }
+
+        if (player.isBoosting) {
+          player.score -= 2 * delta;
+        }
+        const targetLen = Math.floor(player.score);
+        while (player.segments.length < targetLen) {
+          const last = player.segments[player.segments.length - 1];
+          player.segments.push({ ...last });
+        }
+        while (player.segments.length > targetLen) {
+          player.segments.pop();
+        }
+
+        for (let i = orbs.length - 1; i >= 0; i--) {
+          const orb = orbs[i];
+          const dx = head.x - orb.x;
+          const dy = head.y - orb.y;
+          if (dx * dx + dy * dy < 4) {
+            player.score += orb.value;
+            scene.remove(orb.mesh);
+            orbs.splice(i, 1);
+            playOrbSound();
+            spawnOrb();
+          }
+        }
+
+        while (player.meshes.length < player.segments.length) {
+          const sphere = new THREE.Mesh(
+            new THREE.SphereGeometry(0.65, 14, 14),
+            new THREE.MeshStandardMaterial({
+              color: selectedSkin.hex,
+              emissive: selectedSkin.hex,
+              emissiveIntensity: 0.7
+            })
+          );
+          scene.add(sphere);
+          player.meshes.push(sphere);
+        }
+        while (player.meshes.length > player.segments.length) {
+          const m = player.meshes.pop();
+          scene.remove(m);
+        }
+        for (let i = 0; i < player.segments.length; i++) {
+          const seg = player.segments[i];
+          const m = player.meshes[i];
+          m.position.set(seg.x, seg.y, 0.6);
+          m.scale.set(1.0, 1.0, 1.0);
+        }
+
+        let aDiff = player.angle - player.smoothAngle;
+        while (aDiff < -Math.PI) aDiff += Math.PI * 2;
+        while (aDiff > Math.PI) aDiff -= Math.PI * 2;
+        player.smoothAngle += aDiff * 1.8 * delta;
+
+        if (!is3D) {
+          const targetCamZ = 45 + Math.min(20, player.score * 0.12);
+          camera.position.x += (head.x - camera.position.x) * 8 * delta;
+          camera.position.y += (head.y - camera.position.y) * 8 * delta;
+          camera.position.z += (targetCamZ - camera.position.z) * 6 * delta;
+          camera.lookAt(head.x, head.y, 0);
+        } else {
+          const cDistXY = 6 + Math.min(6, player.score * 0.04);
+          const cHeightZ = 36 + Math.min(16, player.score * 0.08);
+          const cx = head.x - Math.cos(player.smoothAngle) * cDistXY;
+          const cy = head.y - Math.sin(player.smoothAngle) * cDistXY;
+          camera.position.x += (cx - camera.position.x) * 5 * delta;
+          camera.position.y += (cy - camera.position.y) * 5 * delta;
+          camera.position.z += (cHeightZ - camera.position.z) * 4 * delta;
+          camera.lookAt(head.x, head.y, 0.5);
+        }
+        document.getElementById('score-display').innerHTML = `Score: <span>${Math.floor(player.score)}</span>`;
+      }
+
+      BOTS.forEach(bot => {
+        if (!bot.alive) {
+          bot.respawnTimer += delta;
+          if (bot.respawnTimer > 3) {
+            bot.alive = true;
+            bot.score = 12;
+            bot.respawnTimer = 0;
+            const sx = (Math.random() - 0.5) * (WORLD_SIZE - 40);
+            const sy = (Math.random() - 0.5) * (WORLD_SIZE - 40);
+            bot.segments = [];
+            for (let i = 0; i < 12; i++) {
+              bot.segments.push({ x: sx, y: sy });
+            }
+          }
+          return;
+        }
+
+        const bHead = { ...bot.segments[0] };
+        if (Math.abs(bHead.x) > half - 15 || Math.abs(bHead.y) > half - 15) {
+          bot.targetAngle = Math.atan2(-bHead.y, -bHead.x);
+        } else if (Math.random() < 0.04) {
+          bot.targetAngle += (Math.random() - 0.5) * 1.5;
+        }
+        let diff = bot.targetAngle - bot.angle;
+        while (diff < -Math.PI) diff += Math.PI * 2;
+        while (diff > Math.PI) diff -= Math.PI * 2;
+        bot.angle += Math.sign(diff) * Math.min(Math.abs(diff), 2.5 * delta);
+        const bSpeed = 7.5;
+        bHead.x += Math.cos(bot.angle) * bSpeed * delta;
+        bHead.y += Math.sin(bot.angle) * bSpeed * delta;
+        bot.segments.unshift(bHead);
+        while (bot.segments.length > Math.floor(bot.score)) {
+          bot.segments.pop();
+        }
+        while (bot.meshes.length < bot.segments.length) {
+          const sphere = new THREE.Mesh(
+            new THREE.SphereGeometry(0.65, 12, 12),
+            new THREE.MeshStandardMaterial({ color: bot.color, emissive: bot.color, emissiveIntensity: 0.6 })
+          );
+          scene.add(sphere);
+          bot.meshes.push(sphere);
+        }
+        for (let i = 0; i < bot.segments.length; i++) {
+          const m = bot.meshes[i];
+          if (m) m.position.set(bot.segments[i].x, bot.segments[i].y, 0.6);
+        }
+
+        if (player.alive && bot.segments.length > 0) {
+          const pH = player.segments[0];
+          const bH = bot.segments[0];
+          const hDx = pH.x - bH.x;
+          const hDy = pH.y - bH.y;
+          if (hDx * hDx + hDy * hDy < 2.4) {
+            if (player.score < bot.score) {
+              playerDie();
+            } else if (player.score > bot.score) {
+              bot.alive = false;
+              bot.segments.forEach((seg, idx) => {
+                if (idx % 2 === 0) spawnOrb(seg.x, seg.y, 1.5);
+              });
+              bot.meshes.forEach(m => scene.remove(m));
+              bot.meshes = [];
+              playOrbSound();
+            }
+          }
+          for (let i = 1; i < bot.segments.length; i++) {
+            const seg = bot.segments[i];
+            const dx = pH.x - seg.x;
+            const dy = pH.y - seg.y;
+            if (dx * dx + dy * dy < 2.0) {
+              playerDie();
+              break;
+            }
+          }
+        }
+      });
+
+      updateLeaderboard();
+      renderer.render(scene, camera);
+    }
+
+    function playerDie() {
+      player.alive = false;
+      playCrashSound();
+      document.getElementById('modal-sub').innerText = `Score: ${Math.floor(player.score)}`;
+      document.getElementById('start-btn').innerText = 'RESPAWN';
+      document.getElementById('modal').style.display = 'flex';
+      player.segments.forEach((seg, i) => {
+        if (i % 2 === 0) spawnOrb(seg.x, seg.y, 1.5);
+      });
+    }
+
+    let lastLbTime = 0;
+    function updateLeaderboard() {
+      const now = Date.now();
+      if (now - lastLbTime < 500) return;
+      lastLbTime = now;
+      const list = [
+        ...(player.alive ? [{ name: 'YOU', score: Math.floor(player.score), color: selectedSkin.color }] : []),
+        ...BOTS.filter(b => b.alive).map(b => ({ name: b.name, score: Math.floor(b.score), color: '#' + b.color.toString(16).padStart(6, '0') }))
+      ].sort((a, b) => b.score - a.score).slice(0, 5);
+      const html = list.map((item, idx) => `
+        <div class="lb-item">
+          <span class="lb-name" style="color: ${item.color}">${idx + 1}. ${item.name}</span>
+          <span class="lb-score">${item.score}</span>
+        </div>
+      `).join('');
+      document.getElementById('leaderboard-list').innerHTML = html;
+    }
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    animate();
+  </script>
+</body>
+</html>

@@ -1,0 +1,6 @@
+{
+  "name": "3D Neon Snake",
+  "description": "3D cyber snake arena with mouse-follow PC controls, mobile virtual joystick, boost turbo, and standalone HTML export.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}
